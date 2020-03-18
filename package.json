@@ -1,0 +1,20 @@
+{
+  "name": "server",
+  "version": "1.0.0",
+  "description": "for bingo backend, by navaneeth",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Navaneeth K",
+  "license": "ISC",
+  "dependencies": {
+    "async-lock": "^1.2.2",
+    "cors": "^2.8.5",
+    "express": "^4.17.1",
+    "express-session": "^1.17.0",
+    "lodash": "^4.17.15",
+    "memorystore": "^1.6.2",
+    "socket.io": "^2.3.0"
+  }
+}
