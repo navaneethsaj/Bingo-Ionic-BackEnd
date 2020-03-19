@@ -57,7 +57,7 @@ router.post('/join', (req, res) => {
     res.send({status: 200, msg: 'success'});
 });
 
-async function gameManager(roomName){
+async function gameManager(roomName) {
     const ERR_CODES = {
         WRONG_PLAYER: {status: 600, msg: 'Not your turn.'},
         ALREADY_STRIKED: {status: 601, msg: 'Already striked'}
@@ -67,7 +67,7 @@ async function gameManager(roomName){
     let playerGrids = [];
     let strikerValues = [];
     let bingoScore = [];
-    let wonPlayers = []
+    let wonPlayers = [];
     let numberOfPlayers = 0;
     let playerTurn = 0;
     let nextWinPosition = 1;
@@ -75,152 +75,197 @@ async function gameManager(roomName){
     let manager = setInterval(() => {
         addListener();
     }, 1000);
-    async function addListener(){
+    let turnbroadcaster = setInterval(broadcastTurn, 1000);
+
+    async function addListener() {
         listenerAddLock.acquire(roomName, (done) => {
-            if (numberOfPlayers < sockets.length){
-                console.log('added listener', 'Player', numberOfPlayers+1);
-                console.log('number of players in room', numberOfPlayers+1);
+            if (numberOfPlayers < sockets.length) {
+                console.log('added listener', 'Player', numberOfPlayers + 1);
+                console.log('number of players in room', numberOfPlayers + 1);
                 playerGrids[numberOfPlayers] = null;
                 bingoScore[numberOfPlayers] = null;
-                sockets[numberOfPlayers].on('played', function (msg){
+                sockets[numberOfPlayers].on('played', function (msg) {
                     const playerIndex = sockets.indexOf(this.currentSocket);
-                    console.log(msg, ' - Player '+ playerIndex);
-                    if (playerTurn === playerIndex){
-                        if (!strikerValues.includes(msg)){
+                    console.log(msg, ' - Player ' + playerIndex);
+                    if (playerTurn === playerIndex) {
+                        if (!strikerValues.includes(msg)) {
                             broadcast(roomName, 'played', msg);
                             strikerValues.push(msg);
-                            playerTurn = ++playerTurn % numberOfPlayers;
-                            if (wonPlayers.includes(playerTurn)){
-                                playerTurn = ++playerTurn % numberOfPlayers;
-                            }
                             checkStatus();
-                            console.log('next player', playerTurn);
-                        }else {
+                            playerTurnLock.acquire('lock', (done)=>{
+                                playerTurn = ++playerTurn % numberOfPlayers;
+                                if (wonPlayers.includes(playerTurn)) {
+                                    playerTurn = ++playerTurn % numberOfPlayers;
+                                }
+                                console.log('next player', playerTurn);
+                                done()
+                            });
+                        } else {
                             this.currentSocket.emit('err', ERR_CODES.ALREADY_STRIKED);
                             console.log('already striked');
                         }
 
-                    }else {
+                    } else {
                         this.currentSocket.emit('err', ERR_CODES.WRONG_PLAYER);
                         console.log('incorrect player');
                     }
-                }.bind({currentSocket: sockets[numberOfPlayers], playerIndex : Number(numberOfPlayers)}));
-                sockets[numberOfPlayers].on('gridValues', function (msg){
+                }.bind({currentSocket: sockets[numberOfPlayers], playerIndex: Number(numberOfPlayers)}));
+                sockets[numberOfPlayers].on('gridValues', function (msg) {
                     const playerIndex = sockets.indexOf(this.currentSocket);
                     playerGrids[playerIndex] = msg;
-                }.bind({currentSocket: sockets[numberOfPlayers], playerIndex : Number(numberOfPlayers)}));
-                sockets[numberOfPlayers].on('disconnect', function (msg){
+                }.bind({currentSocket: sockets[numberOfPlayers], playerIndex: Number(numberOfPlayers)}));
+                sockets[numberOfPlayers].on('disconnect', function (msg) {
                     // console.log(msg, this.currentSocket.id, this.playerIndex);
                     cleanUpPlayerData(this.currentSocket)
-                }.bind({currentSocket: sockets[numberOfPlayers], playerIndex : Number(numberOfPlayers)}));
-                sockets[numberOfPlayers].emit('handshake1', 'ok'+numberOfPlayers);
+                }.bind({currentSocket: sockets[numberOfPlayers], playerIndex: Number(numberOfPlayers)}));
+                sockets[numberOfPlayers].emit('handshake1', 'ok' + numberOfPlayers);
                 sockets[numberOfPlayers].emit('handshake2', strikerValues);
                 sockets[numberOfPlayers].emit('handshake3', numberOfPlayers + 1);
                 broadcast(roomName, 'playerjoined', numberOfPlayers + 1);
                 numberOfPlayers += 1;
-            }else if (numberOfPlayers > sockets.length){
+            } else if (numberOfPlayers > sockets.length) {
                 console.log('more no of players')
             }
             done();
         }, null, null);
-        // if (sockets.length !== numberOfPlayers) {
-        //     if (sockets.length > numberOfPlayers){
-        //         // player joined
-        //         console.log('added listener', sockets[sockets.length - 1].id, 'Player '+sockets.length);
-        //         sockets[sockets.length - 1].on('played', function (msg){
-        //             console.log(msg, this.currentSocket.id);
-        //             // if (playerTurn === sockets.indexOf(this.currentSocket))
-        //             broadcast(roomName, msg);
-        //         }.bind({currentSocket: sockets[sockets.length - 1]}));
-        //     }
-        //     numberOfPlayers = numberOfPlayers + 1;
-        // }
     }
-    async function broadcast(roomName, event, msg){
-        const sockets = gameRoomCollection[roomName].sockets;
-        for (const s of sockets){
-            s.emit(event, msg);
+
+    async function broadcast(roomName, event, msg) {
+        let sockets;
+        try{
+            sockets = gameRoomCollection[roomName].sockets;
+        }catch (e) {
+
+        }
+        try{
+            for (const s of sockets) {
+                try{
+                    s.emit(event, msg);
+                }catch (e) {
+
+                }
+            }
+        }catch (e) {
+
         }
     }
+
+    function broadcastTurn() {
+        playerTurnLock.acquire('lock', (done) => {
+            broadcast(roomName, 'playerturn', playerTurn+1);
+            done();
+        });
+        // console.log('playerturn', playerTurn+1)
+    }
+
     function cleanUpPlayerData(currentSocket) {
         const index = sockets.indexOf(currentSocket);
-        broadcast(roomName, 'playerexit', index + 1);
         sockets.splice(index, 1);
+        broadcast(roomName, 'playerexit', index + 1);
         playerGrids.splice(index, 1);
         bingoScore.splice(index, 1);
         numberOfPlayers--;
-        playerTurn = playerTurn % numberOfPlayers;
-        if (wonPlayers.includes(index)){
+        playerTurnLock.acquire('lock', (done) => {
+            playerTurn = playerTurn % numberOfPlayers;
+            done();
+        })
+        if (wonPlayers.includes(index)) {
             wonPlayers.splice(wonPlayers.indexOf(index), 1);
         }
         console.log('removed socket of player', index);
         console.log('no of players in room', numberOfPlayers);
-        if (numberOfPlayers < 1){
+        if (numberOfPlayers < 1) {
             cleanUpRoom();
             console.log('deleting room', roomName);
         }
+        broadCastNewPlayerId()
     }
+
+    function broadCastNewPlayerId() {
+        for (let sock of sockets) {
+            sock.emit("newplayerid", {playerid: sockets.indexOf(sock) + 1, total: sockets.length});
+            console.log()
+        }
+    }
+
     function checkStatus() {
         playerGrids.forEach((grid) => {
             let score = 0;
             const index = playerGrids.indexOf(grid);
             // horizontal & vertical score
-            for (let i of _.range(0, 5)){
+            for (let i of _.range(0, 5)) {
                 let horizontalStrike = true;
-                for (let j of _.range(0, 5)){
-                    let idx = i*5 + j;
+                for (let j of _.range(0, 5)) {
+                    let idx = i * 5 + j;
                     horizontalStrike = strikerValues.includes(grid[idx]);
-                    if (!horizontalStrike) {break}
+                    if (!horizontalStrike) {
+                        break
+                    }
                 }
-                if (horizontalStrike) {score++;}
+                if (horizontalStrike) {
+                    score++;
+                }
                 let verticalStrike = true;
-                for (let j of _.range(0, 5)){
-                    let idx = i + j*5;
+                for (let j of _.range(0, 5)) {
+                    let idx = i + j * 5;
                     verticalStrike = strikerValues.includes(grid[idx]);
-                    if (!verticalStrike) {break}
+                    if (!verticalStrike) {
+                        break
+                    }
                 }
-                if (verticalStrike) {score++;}
+                if (verticalStrike) {
+                    score++;
+                }
             }
             // diagonal score
             let diagonalStrike = true;
-            for (let j of _.range(0, 5)){
-                let idx = j*6;
+            for (let j of _.range(0, 5)) {
+                let idx = j * 6;
                 diagonalStrike = strikerValues.includes(grid[idx]);
-                if (!diagonalStrike) {break}
+                if (!diagonalStrike) {
+                    break
+                }
             }
-            if (diagonalStrike){score++}
+            if (diagonalStrike) {
+                score++
+            }
             diagonalStrike = true;
-            for (let j of _.range(1, 6)){
-                let idx = j*4;
+            for (let j of _.range(1, 6)) {
+                let idx = j * 4;
                 diagonalStrike = strikerValues.includes(grid[idx]);
-                if (!diagonalStrike) {break}
+                if (!diagonalStrike) {
+                    break
+                }
             }
-            if (diagonalStrike){score++}
+            if (diagonalStrike) {
+                score++
+            }
             bingoScore[index] = score;
-            if (score >= 5 && !wonPlayers.includes(index)){
-                console.log('position',nextWinPosition, 'player', index+1);
-                broadcast(roomName, 'win', {position: nextWinPosition, player: index+1});
+            if (score >= 5 && !wonPlayers.includes(index)) {
+                console.log('position', nextWinPosition, 'player', index + 1);
+                broadcast(roomName, 'win', {position: nextWinPosition, player: index + 1});
+                sockets[index].emit('youwon', {msg: 'Yay, You Won', position: nextWinPosition});
                 nextWinPosition++;
-                sockets[index].emit('youwon', 'Yay, You Won');
                 wonPlayers.push(index);
-                if (nextWinPosition >= numberOfPlayers){
+                if (nextWinPosition >= numberOfPlayers) {
                     console.log('GameOver');
                     broadcast(roomName, 'gameover', 'Game Over');
                     clearInterval(manager);
+                    clearInterval(turnbroadcaster);
                     cleanUpRoom();
                 }
             }
         });
         console.log(bingoScore)
     }
-    function cleanUpRoom(){
+
+    function cleanUpRoom() {
         gameRoomCollectionLock.acquire(roomName, (done) => {
             delete gameRoomCollection[roomName];
             done();
         });
     }
 }
-
 async function garbageCollector(){
     for (let room in gameRoomCollection){
         if (new Date() - gameRoomCollection[room].createdOn > 1000 * 60 * 60){
@@ -231,7 +276,7 @@ async function garbageCollector(){
             });
         }
     }
-    console.log('garbage', gameRoomCollection, new Date());
+    // console.log('garbage', gameRoomCollection, new Date());
 }
 
 setInterval(garbageCollector, 2000); // change to bigger value
