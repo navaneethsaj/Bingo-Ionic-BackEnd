@@ -153,7 +153,7 @@ async function gameManager(roomName) {
     function broadcastTurn() {
         playerTurnLock.acquire('lock', (done) => {
             broadcast(roomName, 'playerturn', playerTurn+1);
-            done();
+            done()
         });
         // console.log('playerturn', playerTurn+1)
     }
@@ -176,6 +176,8 @@ async function gameManager(roomName) {
         console.log('no of players in room', numberOfPlayers);
         if (numberOfPlayers < 1) {
             cleanUpRoom();
+            clearInterval(manager);
+            clearInterval(turnbroadcaster);
             console.log('deleting room', roomName);
         }
         broadCastNewPlayerId()
