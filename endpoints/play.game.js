@@ -3,6 +3,7 @@ const _ = require('lodash');
 const router = express.Router();
 const AsyncLock = require('async-lock');
 const gameRoomCollection = {};
+const gameRoomCollectionLock = new AsyncLock();
 const roomSize = 4;
 let io = undefined;
 router.get('', (req, res) => {
@@ -15,17 +16,22 @@ router.post('/create', (req, res) => {
         res.send({status: 201, msg: 'invalid data'});
         return
     }
-    if (gameRoomCollection[roomName] !== undefined){
-        res.send({status: 202, msg: 'room already exists'});
-        return;
-    }
-    const socket = io.sockets.connected[socketId];
-    gameRoomCollection[roomName] = {};
-    gameRoomCollection[roomName]['roomname'] = roomName;
-    gameRoomCollection[roomName]['sockets'] = [];
-    gameRoomCollection[roomName]['sockets'].push(socket);
-    gameManager(roomName);
-    res.send({status: 200, msg: 'success'});
+    gameRoomCollectionLock.acquire(roomName, (done) => {
+        if (gameRoomCollection[roomName] !== undefined){
+            res.send({status: 202, msg: 'room already exists'});
+            done();
+            return;
+        }
+        const socket = io.sockets.connected[socketId];
+        gameRoomCollection[roomName] = {};
+        gameRoomCollection[roomName]['roomname'] = roomName;
+        gameRoomCollection[roomName]['sockets'] = [];
+        gameRoomCollection[roomName]['sockets'].push(socket);
+        gameManager(roomName);
+        gameRoomCollection[roomName]['createdOn'] = new Date();
+        res.send({status: 200, msg: 'success'});
+        done();
+    })
 });
 router.post('/join', (req, res) => {
     const roomName = req.body.roomname;
@@ -61,11 +67,12 @@ async function gameManager(roomName){
     let playerGrids = [];
     let strikerValues = [];
     let bingoScore = [];
+    let wonPlayers = []
     let numberOfPlayers = 0;
     let playerTurn = 0;
     let nextWinPosition = 1;
     const sockets = gameRoomCollection[roomName].sockets;
-    setInterval(() => {
+    let manager = setInterval(() => {
         addListener();
     }, 1000);
     async function addListener(){
@@ -83,6 +90,9 @@ async function gameManager(roomName){
                             broadcast(roomName, 'played', msg);
                             strikerValues.push(msg);
                             playerTurn = ++playerTurn % numberOfPlayers;
+                            if (wonPlayers.includes(playerTurn)){
+                                playerTurn = ++playerTurn % numberOfPlayers;
+                            }
                             checkStatus();
                             console.log('next player', playerTurn);
                         }else {
@@ -105,6 +115,8 @@ async function gameManager(roomName){
                 }.bind({currentSocket: sockets[numberOfPlayers], playerIndex : Number(numberOfPlayers)}));
                 sockets[numberOfPlayers].emit('handshake1', 'ok'+numberOfPlayers);
                 sockets[numberOfPlayers].emit('handshake2', strikerValues);
+                sockets[numberOfPlayers].emit('handshake3', numberOfPlayers + 1);
+                broadcast(roomName, 'playerjoined', numberOfPlayers + 1);
                 numberOfPlayers += 1;
             }else if (numberOfPlayers > sockets.length){
                 console.log('more no of players')
@@ -131,14 +143,22 @@ async function gameManager(roomName){
         }
     }
     function cleanUpPlayerData(currentSocket) {
-        const playerIndex = sockets.indexOf(this.currentSocket);
         const index = sockets.indexOf(currentSocket);
+        broadcast(roomName, 'playerexit', index + 1);
         sockets.splice(index, 1);
         playerGrids.splice(index, 1);
         bingoScore.splice(index, 1);
         numberOfPlayers--;
-        console.log('removed socket of player', playerIndex);
+        playerTurn = playerTurn % numberOfPlayers;
+        if (wonPlayers.includes(index)){
+            wonPlayers.splice(wonPlayers.indexOf(index), 1);
+        }
+        console.log('removed socket of player', index);
         console.log('no of players in room', numberOfPlayers);
+        if (numberOfPlayers < 1){
+            cleanUpRoom();
+            console.log('deleting room', roomName);
+        }
     }
     function checkStatus() {
         playerGrids.forEach((grid) => {
@@ -177,20 +197,44 @@ async function gameManager(roomName){
             }
             if (diagonalStrike){score++}
             bingoScore[index] = score;
-            if (score >= 5){
+            if (score >= 5 && !wonPlayers.includes(index)){
                 console.log('position',nextWinPosition, 'player', index+1);
                 broadcast(roomName, 'win', {position: nextWinPosition, player: index+1});
                 nextWinPosition++;
                 sockets[index].emit('youwon', 'Yay, You Won');
-                if (nextWinPosition > numberOfPlayers){
+                wonPlayers.push(index);
+                if (nextWinPosition >= numberOfPlayers){
                     console.log('GameOver');
-                    broadcast(roomName, 'gameover', 'Game Over')
+                    broadcast(roomName, 'gameover', 'Game Over');
+                    clearInterval(manager);
+                    cleanUpRoom();
                 }
             }
         });
         console.log(bingoScore)
     }
+    function cleanUpRoom(){
+        gameRoomCollectionLock.acquire(roomName, (done) => {
+            delete gameRoomCollection[roomName];
+            done();
+        });
+    }
 }
+
+async function garbageCollector(){
+    for (let room in gameRoomCollection){
+        if (new Date() - gameRoomCollection[room].createdOn > 1000 * 60 * 60){
+            // remove room living more than 1 hour
+            gameRoomCollectionLock.acquire(room, (done) => {
+                delete gameRoomCollection[room];
+                done()
+            });
+        }
+    }
+    console.log('garbage', gameRoomCollection, new Date());
+}
+
+setInterval(garbageCollector, 2000); // change to bigger value
 
 module.exports = function (io_ref) {
     io = io_ref;

@@ -6,7 +6,7 @@ const http = require('http').createServer(app);
 const io = require('socket.io')(http);
 var session = require('express-session');
 var MemoryStore = require('memorystore')(session);
-const origin = ['http://localhost:8100' ,'http://localhost:8101'];
+const origin = ['http://localhost:8101' ,'http://localhost:8100'];
 io.set('origins', origin);
 io.on('connection', function(socket){
     console.log('a user connected', socket.id);
