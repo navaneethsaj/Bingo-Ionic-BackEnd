@@ -189,71 +189,75 @@ async function gameManager(roomName) {
     }
 
     function checkStatus() {
-        playerGrids.forEach((grid) => {
-            let score = 0;
-            const index = playerGrids.indexOf(grid);
-            // horizontal & vertical score
-            for (let i of _.range(0, 5)) {
-                let horizontalStrike = true;
+        try{
+            playerGrids.forEach((grid) => {
+                let score = 0;
+                const index = playerGrids.indexOf(grid);
+                // horizontal & vertical score
+                for (let i of _.range(0, 5)) {
+                    let horizontalStrike = true;
+                    for (let j of _.range(0, 5)) {
+                        let idx = i * 5 + j;
+                        horizontalStrike = strikerValues.includes(grid[idx]);
+                        if (!horizontalStrike) {
+                            break
+                        }
+                    }
+                    if (horizontalStrike) {
+                        score++;
+                    }
+                    let verticalStrike = true;
+                    for (let j of _.range(0, 5)) {
+                        let idx = i + j * 5;
+                        verticalStrike = strikerValues.includes(grid[idx]);
+                        if (!verticalStrike) {
+                            break
+                        }
+                    }
+                    if (verticalStrike) {
+                        score++;
+                    }
+                }
+                // diagonal score
+                let diagonalStrike = true;
                 for (let j of _.range(0, 5)) {
-                    let idx = i * 5 + j;
-                    horizontalStrike = strikerValues.includes(grid[idx]);
-                    if (!horizontalStrike) {
+                    let idx = j * 6;
+                    diagonalStrike = strikerValues.includes(grid[idx]);
+                    if (!diagonalStrike) {
                         break
                     }
                 }
-                if (horizontalStrike) {
-                    score++;
+                if (diagonalStrike) {
+                    score++
                 }
-                let verticalStrike = true;
-                for (let j of _.range(0, 5)) {
-                    let idx = i + j * 5;
-                    verticalStrike = strikerValues.includes(grid[idx]);
-                    if (!verticalStrike) {
+                diagonalStrike = true;
+                for (let j of _.range(1, 6)) {
+                    let idx = j * 4;
+                    diagonalStrike = strikerValues.includes(grid[idx]);
+                    if (!diagonalStrike) {
                         break
                     }
                 }
-                if (verticalStrike) {
-                    score++;
+                if (diagonalStrike) {
+                    score++
                 }
-            }
-            // diagonal score
-            let diagonalStrike = true;
-            for (let j of _.range(0, 5)) {
-                let idx = j * 6;
-                diagonalStrike = strikerValues.includes(grid[idx]);
-                if (!diagonalStrike) {
-                    break
+                bingoScore[index] = score;
+                if (score >= 5 && !wonPlayers.includes(index)) {
+                    console.log('position', nextWinPosition, 'player', index + 1);
+                    broadcast(roomName, 'win', {position: nextWinPosition, player: index + 1});
+                    sockets[index].emit('youwon', {msg: 'Yay, You Won', position: nextWinPosition});
+                    nextWinPosition++;
+                    wonPlayers.push(index);
+                    if (nextWinPosition >= numberOfPlayers) {
+                        console.log('GameOver');
+                        broadcast(roomName, 'gameover', 'Game Over');
+                        cleanUpRoom();
+                    }
                 }
-            }
-            if (diagonalStrike) {
-                score++
-            }
-            diagonalStrike = true;
-            for (let j of _.range(1, 6)) {
-                let idx = j * 4;
-                diagonalStrike = strikerValues.includes(grid[idx]);
-                if (!diagonalStrike) {
-                    break
-                }
-            }
-            if (diagonalStrike) {
-                score++
-            }
-            bingoScore[index] = score;
-            if (score >= 5 && !wonPlayers.includes(index)) {
-                console.log('position', nextWinPosition, 'player', index + 1);
-                broadcast(roomName, 'win', {position: nextWinPosition, player: index + 1});
-                sockets[index].emit('youwon', {msg: 'Yay, You Won', position: nextWinPosition});
-                nextWinPosition++;
-                wonPlayers.push(index);
-                if (nextWinPosition >= numberOfPlayers) {
-                    console.log('GameOver');
-                    broadcast(roomName, 'gameover', 'Game Over');
-                    cleanUpRoom();
-                }
-            }
-        });
+            });
+        }catch (e) {
+            console.log(e);
+        }
         console.log(bingoScore)
     }
 
