@@ -83,7 +83,7 @@ async function gameManager(roomName) {
                 console.log('added listener', 'Player', numberOfPlayers + 1);
                 console.log('number of players in room', numberOfPlayers + 1);
                 playerGrids[numberOfPlayers] = null;
-                bingoScore[numberOfPlayers] = null;
+                bingoScore[numberOfPlayers] = 0;
                 sockets[numberOfPlayers].on('played', function (msg) {
                     const playerIndex = sockets.indexOf(this.currentSocket);
                     console.log(msg, ' - Player ' + playerIndex);
@@ -242,6 +242,7 @@ async function gameManager(roomName) {
                     score++
                 }
                 bingoScore[index] = score;
+                sockets[index].emit('points', score);
                 if (score >= 5 && !wonPlayers.includes(index)) {
                     console.log('position', nextWinPosition, 'player', index + 1);
                     broadcast(roomName, 'win', {position: nextWinPosition, player: index + 1});
