@@ -295,12 +295,12 @@ async function garbageCollector(){
             });
         }
     }
-    console.log('garbage', gameRoomCollection, new Date());
+    // console.log('garbage', gameRoomCollection, new Date());
 }
 
 setInterval(garbageCollector, 2000); // change to bigger value
 
 module.exports = function (io_ref) {
     io = io_ref;
-    return router;
+    return [router, gameRoomCollection];
 };

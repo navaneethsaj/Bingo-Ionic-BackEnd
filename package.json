@@ -13,6 +13,7 @@
     "cors": "^2.8.5",
     "express": "^4.17.1",
     "express-session": "^1.17.0",
+    "fuse.js": "^5.0.7-beta",
     "lodash": "^4.17.15",
     "memorystore": "^1.6.2",
     "socket.io": "^2.3.0"
