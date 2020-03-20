@@ -176,8 +176,6 @@ async function gameManager(roomName) {
         console.log('no of players in room', numberOfPlayers);
         if (numberOfPlayers < 1) {
             cleanUpRoom();
-            clearInterval(manager);
-            clearInterval(turnbroadcaster);
             console.log('deleting room', roomName);
         }
         broadCastNewPlayerId()
@@ -252,8 +250,6 @@ async function gameManager(roomName) {
                 if (nextWinPosition >= numberOfPlayers) {
                     console.log('GameOver');
                     broadcast(roomName, 'gameover', 'Game Over');
-                    clearInterval(manager);
-                    clearInterval(turnbroadcaster);
                     cleanUpRoom();
                 }
             }
@@ -262,6 +258,23 @@ async function gameManager(roomName) {
     }
 
     function cleanUpRoom() {
+        listenerAddLock.acquire(roomName, (done) => {
+           try{
+               let sockets = gameRoomCollection[roomName].sockets;
+               for (let sock of sockets){
+                   try{
+                       sock.removeAllListeners();
+                   }catch (e) {
+
+                   }
+               }
+           } catch (e) {
+
+           }
+            done()
+        });
+        clearInterval(manager);
+        clearInterval(turnbroadcaster);
         gameRoomCollectionLock.acquire(roomName, (done) => {
             delete gameRoomCollection[roomName];
             done();
@@ -278,7 +291,7 @@ async function garbageCollector(){
             });
         }
     }
-    // console.log('garbage', gameRoomCollection, new Date());
+    console.log('garbage', gameRoomCollection, new Date());
 }
 
 setInterval(garbageCollector, 2000); // change to bigger value
