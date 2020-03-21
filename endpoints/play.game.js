@@ -173,7 +173,7 @@ async function gameManager(roomName) {
                     });
                     sockets[numberOfPlayers].on('chatted', function (msg) {
                         console.log('chat', msg);
-                       broadcast(roomName, 'chat', {id: this.playerIndex+1, msg: msg});
+                       broadcast(roomName, 'chat', {id: msg.id, msg: msg.msg});
                     }.bind({playerIndex: Number(numberOfPlayers)}));
                     sockets[numberOfPlayers].emit('handshake1', 'ok' + numberOfPlayers);
                     sockets[numberOfPlayers].emit('handshake2', strikerValues);
