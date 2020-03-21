@@ -103,6 +103,8 @@ async function gameManager(roomName) {
                     console.log('number of players in room', numberOfPlayers + 1);
                     playerGrids[numberOfPlayers] = null;
                     bingoScore[numberOfPlayers] = 0;
+
+                    // binded player index is not used
                     sockets[numberOfPlayers].on('played', function (msg) {
                         gameRoomCollection[roomName]['started'] = true;
                         const playerIndex = sockets.indexOf(this.currentSocket);
