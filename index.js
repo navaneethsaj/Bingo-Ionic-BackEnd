@@ -32,7 +32,7 @@ const auth = require('./endpoints/authentication');
 const ret = require('./endpoints/play.game')(io);
 const play = ret[0];
 const gameRoomCollection = ret[1];
-io.origins('*:*')
+io.origins('*:*');
 io.on('connection', function(socket){
     console.log('a user connected', socket.id);
     socket.on('disconnect', ()=>{
