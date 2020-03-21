@@ -53,8 +53,12 @@ router.post('/join', (req, res) => {
         res.send({status: 205, msg: 'Room Full'});
         return;
     }
+    if (gameRoomCollection[roomName]['started']){
+        res.send({status: 206, msg: 'Game Already Started'});
+        return;
+    }
     if (gameRoomCollection[roomName]['botplay']){
-        res.send({status: 205, msg: 'Opponent Playing with BOT'});
+        res.send({status: 207, msg: 'Opponent Playing with BOT'});
         return;
     }
     gameRoomCollection[roomName]['sockets'].push(socket);
@@ -91,6 +95,7 @@ async function gameManager(roomName) {
                     playerGrids[numberOfPlayers] = null;
                     bingoScore[numberOfPlayers] = 0;
                     sockets[numberOfPlayers].on('played', function (msg) {
+                        gameRoomCollection[roomName]['started'] = true;
                         const playerIndex = sockets.indexOf(this.currentSocket);
                         console.log(msg, ' - Player ' + playerIndex);
                         if (playerTurn === playerIndex) {
