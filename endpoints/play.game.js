@@ -105,18 +105,26 @@ async function gameManager(roomName) {
                                 console.log('next player', playerTurn);
 
                                 function botplay() {
+                                    playerTurn = 1;
                                     for (let val of botgridValues){
                                         if (!strikerValues.includes(val)){
                                             strikerValues.push(val);
                                             console.log('botplayed', val);
-                                            sockets[0].emit('played', val);
+                                            setTimeout(()=>{
+                                                sockets[0].emit('played', val);
+                                                playerTurn = 0;
+                                            }, 1200);
                                             return
                                         }
                                     }
                                 }
 
-                                if (gameRoomCollection[roomName]['botplay']){
-                                    botplay()
+                                try{
+                                    if (gameRoomCollection[roomName]['botplay']){
+                                        botplay()
+                                    }
+                                }catch (e) {
+
                                 }
                                 done()
                             });
@@ -280,7 +288,14 @@ async function gameManager(roomName) {
                 if (score >= 5 && !wonPlayers.includes(index)) {
                     console.log('position', nextWinPosition, 'player', index + 1);
                     broadcast(roomName, 'win', {position: nextWinPosition, player: index + 1});
-                    sockets[index].emit('youwon', {msg: 'Yay, You Won', position: nextWinPosition});
+                    try{
+                        sockets[index].emit('youwon', {msg: 'Yay, You Won', position: nextWinPosition});
+                        // if (gameRoomCollection[roomName]['botplay']){
+                        //     sockets[0].emit('botwon', 'You Were Defeated By Bot');
+                        // }
+                    }catch (e) {
+
+                    }
                     nextWinPosition++;
                     wonPlayers.push(index);
                     if (nextWinPosition >= numberOfPlayers) {
