@@ -24,8 +24,9 @@ const corsOptions = {
         } else {
             callback(new Error('Origin not allowed by CORS'));
         }
-    }
-}
+    },
+    credentials: true
+};
 const auth = require('./endpoints/authentication');
 const ret = require('./endpoints/play.game')(io);
 const play = ret[0];
