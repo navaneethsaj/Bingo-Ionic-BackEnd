@@ -108,7 +108,8 @@ async function gameManager(roomName) {
                                     for (let val of botgridValues){
                                         if (!strikerValues.includes(val)){
                                             strikerValues.push(val);
-                                            console.log('botplayed', val)
+                                            console.log('botplayed', val);
+                                            sockets[0].emit('played', val);
                                             return
                                         }
                                     }
@@ -271,7 +272,11 @@ async function gameManager(roomName) {
                     score++
                 }
                 bingoScore[index] = score;
-                sockets[index].emit('points', score);
+                try{
+                    sockets[index].emit('points', score);
+                }catch (e) {
+                    console.log('bot play')
+                }
                 if (score >= 5 && !wonPlayers.includes(index)) {
                     console.log('position', nextWinPosition, 'player', index + 1);
                     broadcast(roomName, 'win', {position: nextWinPosition, player: index + 1});
