@@ -10,59 +10,68 @@ router.get('', (req, res) => {
     res.send('play server running');
 });
 router.post('/create', (req, res) => {
-    const roomName = req.body.roomname;
-    const socketId = req.body.socketid;
-    if (roomName === undefined || socketId === undefined || roomName.length<1){
-        res.send({status: 201, msg: 'invalid data'});
-        return
-    }
-    gameRoomCollectionLock.acquire(roomName, (done) => {
-        if (gameRoomCollection[roomName] !== undefined){
-            res.send({status: 202, msg: 'room already exists'});
+    try {
+
+        const roomName = req.body.roomname;
+        const socketId = req.body.socketid;
+        if (roomName === undefined || socketId === undefined || roomName.length<1){
+            res.send({status: 201, msg: 'invalid data'});
+            return
+        }
+        gameRoomCollectionLock.acquire(roomName, (done) => {
+            if (gameRoomCollection[roomName] !== undefined){
+                res.send({status: 202, msg: 'room already exists'});
+                done();
+                return;
+            }
+            const socket = io.sockets.connected[socketId];
+            gameRoomCollection[roomName] = {};
+            gameRoomCollection[roomName]['roomname'] = roomName;
+            gameRoomCollection[roomName]['sockets'] = [];
+            gameRoomCollection[roomName]['sockets'].push(socket);
+            gameManager(roomName);
+            gameRoomCollection[roomName]['createdOn'] = new Date();
+            res.send({status: 200, msg: 'success'});
             done();
+        })
+    }catch (e) {
+
+    }
+});
+router.post('/join', (req, res) => {
+    try{
+        const roomName = req.body.roomname;
+        const socketId = req.body.socketid;
+        if (roomName === undefined || socketId === undefined){
+            res.send({status: 201, msg: 'invalid data'});
+            return
+        }
+        if (gameRoomCollection[roomName] === undefined){
+            res.send({status: 204, msg: 'room does not exists'});
             return;
         }
         const socket = io.sockets.connected[socketId];
-        gameRoomCollection[roomName] = {};
-        gameRoomCollection[roomName]['roomname'] = roomName;
-        gameRoomCollection[roomName]['sockets'] = [];
+        if (gameRoomCollection[roomName]['sockets'].includes(socket)){
+            res.send({status: 203, msg: 'Rejoined'});
+            return;
+        }
+        if (gameRoomCollection[roomName]['sockets'].length >= roomSize){
+            res.send({status: 205, msg: 'Room Full'});
+            return;
+        }
+        if (gameRoomCollection[roomName]['started']){
+            res.send({status: 206, msg: 'Game Already Started'});
+            return;
+        }
+        if (gameRoomCollection[roomName]['botplay']){
+            res.send({status: 207, msg: 'Opponent Playing with BOT'});
+            return;
+        }
         gameRoomCollection[roomName]['sockets'].push(socket);
-        gameManager(roomName);
-        gameRoomCollection[roomName]['createdOn'] = new Date();
         res.send({status: 200, msg: 'success'});
-        done();
-    })
-});
-router.post('/join', (req, res) => {
-    const roomName = req.body.roomname;
-    const socketId = req.body.socketid;
-    if (roomName === undefined || socketId === undefined){
-        res.send({status: 201, msg: 'invalid data'});
-        return
+    } catch (e) {
+
     }
-    if (gameRoomCollection[roomName] === undefined){
-        res.send({status: 204, msg: 'room does not exists'});
-        return;
-    }
-    const socket = io.sockets.connected[socketId];
-    if (gameRoomCollection[roomName]['sockets'].includes(socket)){
-        res.send({status: 203, msg: 'Rejoined'});
-        return;
-    }
-    if (gameRoomCollection[roomName]['sockets'].length >= roomSize){
-        res.send({status: 205, msg: 'Room Full'});
-        return;
-    }
-    if (gameRoomCollection[roomName]['started']){
-        res.send({status: 206, msg: 'Game Already Started'});
-        return;
-    }
-    if (gameRoomCollection[roomName]['botplay']){
-        res.send({status: 207, msg: 'Opponent Playing with BOT'});
-        return;
-    }
-    gameRoomCollection[roomName]['sockets'].push(socket);
-    res.send({status: 200, msg: 'success'});
 });
 
 async function gameManager(roomName) {
@@ -210,31 +219,44 @@ async function gameManager(roomName) {
     }
 
     function cleanUpPlayerData(currentSocket) {
-        const index = sockets.indexOf(currentSocket);
-        sockets.splice(index, 1);
-        broadcast(roomName, 'playerexit', index + 1);
-        playerGrids.splice(index, 1);
-        bingoScore.splice(index, 1);
-        numberOfPlayers--;
-        playerTurnLock.acquire('lock', (done) => {
-            playerTurn = playerTurn % numberOfPlayers;
-            done();
-        })
-        if (wonPlayers.includes(index)) {
-            wonPlayers.splice(wonPlayers.indexOf(index), 1);
+        try{
+            let index;
+            try{
+                index = sockets.indexOf(currentSocket);
+            }catch (e) {
+                return
+            }
+            sockets.splice(index, 1);
+            broadcast(roomName, 'playerexit', index + 1);
+            playerGrids.splice(index, 1);
+            bingoScore.splice(index, 1);
+            numberOfPlayers--;
+            playerTurnLock.acquire('lock', (done) => {
+                playerTurn = playerTurn % numberOfPlayers;
+                done();
+            })
+            if (wonPlayers.includes(index)) {
+                wonPlayers.splice(wonPlayers.indexOf(index), 1);
+            }
+            console.log('removed socket of player', index);
+            console.log('no of players in room', numberOfPlayers);
+            if (numberOfPlayers < 1) {
+                cleanUpRoom();
+                console.log('deleting room', roomName);
+            }
+            broadCastNewPlayerId()
+        } catch (e) {
+
         }
-        console.log('removed socket of player', index);
-        console.log('no of players in room', numberOfPlayers);
-        if (numberOfPlayers < 1) {
-            cleanUpRoom();
-            console.log('deleting room', roomName);
-        }
-        broadCastNewPlayerId()
     }
 
     function broadCastNewPlayerId() {
         for (let sock of sockets) {
-            sock.emit("newplayerid", {playerid: sockets.indexOf(sock) + 1, total: sockets.length});
+            try{
+                sock.emit("newplayerid", {playerid: sockets.indexOf(sock) + 1, total: sockets.length});
+            }catch (e) {
+
+            }
             console.log()
         }
     }
@@ -350,10 +372,14 @@ async function gameManager(roomName) {
 }
 async function garbageCollector(){
     for (let room in gameRoomCollection){
-        if (new Date() - gameRoomCollection[room].createdOn > 1000 * 60 * 60){
-            // remove room living more than 1 hour
+        if (new Date() - gameRoomCollection[room].createdOn > 1000 * 60 * 60 * 3){
+            // remove room living more than 3 hour
             gameRoomCollectionLock.acquire(room, (done) => {
-                delete gameRoomCollection[room];
+                try{
+                    delete gameRoomCollection[room];
+                }catch (e) {
+
+                }
                 done()
             });
         }
