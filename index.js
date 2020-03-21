@@ -40,10 +40,6 @@ io.on('connection', function(socket){
         socket.emit('searchresult', searchres)
     })
 });
-// app.use((req, res, next) => {
-//     console.log(req.get('host'), req.get('origin'))
-//     next()
-// })
 app.use(cors({origin: origin, credentials:true}));
 app.use(express.json());
 app.use(express.urlencoded());
