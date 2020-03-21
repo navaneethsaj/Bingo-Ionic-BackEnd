@@ -8,12 +8,29 @@ var session = require('express-session');
 const Fuse = require('fuse.js');
 const _ = require('lodash');
 var MemoryStore = require('memorystore')(session);
-const origin = ['http://localhost:8101' ,'http://localhost:8100', 'http://localhost/'];
+const allowedOrigins = [
+    'capacitor://localhost',
+    'ionic://localhost',
+    'http://localhost',
+    'http://localhost:8080',
+    'http://localhost:8100'
+];
+
+// Reflect the origin if it's in the allowed list or not defined (cURL, Postman, etc.)
+const corsOptions = {
+    origin: (origin, callback) => {
+        if (allowedOrigins.includes(origin) || !origin) {
+            callback(null, true);
+        } else {
+            callback(new Error('Origin not allowed by CORS'));
+        }
+    }
+}
 const auth = require('./endpoints/authentication');
 const ret = require('./endpoints/play.game')(io);
 const play = ret[0];
 const gameRoomCollection = ret[1];
-io.set('origins', origin);
+io.set('origins', allowedOrigins);
 io.on('connection', function(socket){
     console.log('a user connected', socket.id);
     socket.on('disconnect', ()=>{
@@ -40,7 +57,7 @@ io.on('connection', function(socket){
         socket.emit('searchresult', searchres)
     })
 });
-app.use(cors({origin: origin, credentials:true}));
+app.use(cors(corsOptions));
 app.use(express.json());
 app.use(express.urlencoded());
 app.use(session(
