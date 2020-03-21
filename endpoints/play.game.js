@@ -162,6 +162,9 @@ async function gameManager(roomName) {
                             playerGrids.push(botgridValues);
                         }
                     });
+                    sockets[numberOfPlayers].on('chatted', function (msg) {
+                       broadcast(roomName, 'chat', {id: this.playerIndex, msg: msg});
+                    }.bind({playerIndex: Number(numberOfPlayers)}));
                     sockets[numberOfPlayers].emit('handshake1', 'ok' + numberOfPlayers);
                     sockets[numberOfPlayers].emit('handshake2', strikerValues);
                     sockets[numberOfPlayers].emit('handshake3', numberOfPlayers + 1);
