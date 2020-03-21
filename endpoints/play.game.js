@@ -53,6 +53,10 @@ router.post('/join', (req, res) => {
         res.send({status: 205, msg: 'Room Full'});
         return;
     }
+    if (gameRoomCollection[roomName]['botplay']){
+        res.send({status: 205, msg: 'Opponent Playing with BOT'});
+        return;
+    }
     gameRoomCollection[roomName]['sockets'].push(socket);
     res.send({status: 200, msg: 'success'});
 });
@@ -68,6 +72,7 @@ async function gameManager(roomName) {
     let strikerValues = [];
     let bingoScore = [];
     let wonPlayers = [];
+    let botgridValues = [];
     let numberOfPlayers = 0;
     let playerTurn = 0;
     let nextWinPosition = 1;
@@ -98,6 +103,20 @@ async function gameManager(roomName) {
                                     playerTurn = ++playerTurn % numberOfPlayers;
                                 }
                                 console.log('next player', playerTurn);
+
+                                function botplay() {
+                                    for (let val of botgridValues){
+                                        if (!strikerValues.includes(val)){
+                                            strikerValues.push(val);
+                                            console.log('botplayed', val)
+                                            return
+                                        }
+                                    }
+                                }
+
+                                if (gameRoomCollection[roomName]['botplay']){
+                                    botplay()
+                                }
                                 done()
                             });
                         } else {
@@ -105,7 +124,8 @@ async function gameManager(roomName) {
                             console.log('already striked');
                         }
 
-                    } else {
+                    }
+                    else {
                         this.currentSocket.emit('err', ERR_CODES.WRONG_PLAYER);
                         console.log('incorrect player');
                     }
@@ -118,6 +138,15 @@ async function gameManager(roomName) {
                     // console.log(msg, this.currentSocket.id, this.playerIndex);
                     cleanUpPlayerData(this.currentSocket)
                 }.bind({currentSocket: sockets[numberOfPlayers], playerIndex: Number(numberOfPlayers)}));
+                sockets[numberOfPlayers].on('botplay', (msg) => {
+                    if (numberOfPlayers < 2){
+                        console.log('bot play started');
+                        gameRoomCollection[roomName]['botplay'] = true;
+                        botgridValues = _.range(1, 26);
+                        botgridValues = _.shuffle(botgridValues);
+                        playerGrids.push(botgridValues);
+                    }
+                });
                 sockets[numberOfPlayers].emit('handshake1', 'ok' + numberOfPlayers);
                 sockets[numberOfPlayers].emit('handshake2', strikerValues);
                 sockets[numberOfPlayers].emit('handshake3', numberOfPlayers + 1);
