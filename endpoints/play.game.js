@@ -331,12 +331,15 @@ async function gameManager(roomName) {
                     console.log('position', nextWinPosition, 'player', index + 1);
                     broadcast(roomName, 'win', {position: nextWinPosition, player: index + 1});
                     try{
+                        console.log('you won', index);
                         sockets[index].emit('youwon', {msg: 'Yay, You Won', position: nextWinPosition});
+                        console.log('nextwin pos- pre', nextWinPosition);
                         // if (gameRoomCollection[roomName]['botplay']){
                         //     sockets[0].emit('botwon', 'You Were Defeated By Bot');
                         // }
                     }catch (e) {
-
+                        // reaches here when playing with bot
+                        // console.log(e)
                     }
                     nextWinPosition++;
                     wonPlayers.push(index);
