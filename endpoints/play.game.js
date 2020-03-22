@@ -18,6 +18,10 @@ router.post('/create', (req, res) => {
             res.send({status: 201, msg: 'invalid data'});
             return
         }
+        if (roomName.length > 20){
+            res.send({status: 201, msg: 'invalid data'});
+            return
+        }
         gameRoomCollectionLock.acquire(roomName, (done) => {
             if (gameRoomCollection[roomName] !== undefined){
                 res.send({status: 202, msg: 'room already exists'});

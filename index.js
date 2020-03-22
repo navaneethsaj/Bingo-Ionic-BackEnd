@@ -32,6 +32,7 @@ const auth = require('./endpoints/authentication');
 const ret = require('./endpoints/play.game')(io);
 const play = ret[0];
 const gameRoomCollection = ret[1];
+const scores = require('./endpoints/scoreboard');
 io.origins('*:*');
 io.on('connection', function(socket){
     console.log('a user connected', socket.id);
@@ -77,6 +78,7 @@ app.use(session(
     }));
 app.use('/auth', auth);
 app.use('/play',play);
+app.use('/score', scores);
 app.get('', (req, res) => {
     res.send('server running')
 });
