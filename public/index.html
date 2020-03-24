@@ -5,16 +5,22 @@
     <title>Bingo5X5</title>
     <style type="text/css">
         iframe{
-            height: 90vh;
+            height: 94vh;
             width: 50vh;
             border: none;
         }
     </style>
 </head>
 <body>
+<script>
+    var isMobile = window.orientation > -1;
+    if (isMobile){window.location.href = '/'}
+</script>
 <div>Hello</div>
+<div style="text-align: center; width: 100%">
     <iframe src="index.html">
 
     </iframe>
+</div>
 </body>
 </html>

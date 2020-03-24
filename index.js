@@ -85,7 +85,7 @@ app.use('/auth', auth);
 app.use('/play',play);
 app.use('/score', scores);
 app.use(express.static(path.join(__dirname, 'public/www')));
-app.get('/bingo', (req, res) => {
+app.get('/web', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'))
 });
 http.listen(port, ()=>{
