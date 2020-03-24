@@ -2,6 +2,7 @@ const port = process.env.PORT || 3200;
 const express = require('express');
 var cors = require('cors');
 const app = express();
+const path = require('path');
 const http = require('http').createServer(app);
 const io = require('socket.io')(http);
 var session = require('express-session');
@@ -33,6 +34,8 @@ const auth = require('./endpoints/authentication');
 const ret = require('./endpoints/play.game')(io);
 const play = ret[0];
 const gameRoomCollection = ret[1];
+
+
 const scores = require('./endpoints/scoreboard');
 io.origins('*:*');
 io.on('connection', function(socket){
@@ -80,9 +83,9 @@ app.use(session(
 app.use('/auth', auth);
 app.use('/play',play);
 app.use('/score', scores);
-app.use(express.static('./www'))
-app.get('', (req, res) => {
-    res.sendFile(path.join(__dirname, 'www', 'index.html'))
+app.use(express.static(path.join(__dirname, 'public/www')));
+app.get('/bingo', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'index.html'))
 });
 http.listen(port, ()=>{
     console.log('listening on http://localhost:'+ port)
