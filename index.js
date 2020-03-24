@@ -14,7 +14,8 @@ const allowedOrigins = [
     'http://localhost',
     'http://localhost:8080',
     'http://localhost:8100',
-    'http://localhost:8101'
+    'http://localhost:8101',
+    'http://localhost:3200'
 ];
 
 // Reflect the origin if it's in the allowed list or not defined (cURL, Postman, etc.)
@@ -79,8 +80,9 @@ app.use(session(
 app.use('/auth', auth);
 app.use('/play',play);
 app.use('/score', scores);
+app.use(express.static('./www'))
 app.get('', (req, res) => {
-    res.send('server running')
+    res.sendFile(path.join(__dirname, 'www', 'index.html'))
 });
 http.listen(port, ()=>{
     console.log('listening on http://localhost:'+ port)
