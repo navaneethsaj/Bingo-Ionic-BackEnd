@@ -88,6 +88,9 @@ app.use(express.static(path.join(__dirname, 'public/www')));
 app.get('/web', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'))
 });
+app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public/www', 'index.html'))
+})
 http.listen(port, ()=>{
     console.log('listening on http://localhost:'+ port)
 });
