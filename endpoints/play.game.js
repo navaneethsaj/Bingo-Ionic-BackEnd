@@ -6,12 +6,38 @@ const gameRoomCollection = {};
 const gameRoomCollectionLock = new AsyncLock();
 const roomSize = 4;
 let io = undefined;
+const globals = require('../creds/mongoDB');
+const uri = globals.uri;
+const playLogDB = globals.playLogDB;
+const MongoClient = require('mongodb').MongoClient;
+const client = new MongoClient(uri, {useNewUrlParser: true, useUnifiedTopology: true});
+const ObjectID = require('mongodb').ObjectID;
+
+var connected = false;
+router.use((req, res, next) => {
+    if (connected){
+        next()
+    }else {
+        res.send({status: 290, msg: 'please try again later. db connection not established'})
+    }
+});
+
+client.connect((err)=>{
+    if (err){
+        console.log(err);
+        console.log('db conn failed '+ __filename.slice(__dirname.length + 1))
+    }else {
+        console.log('db connected '+ __filename.slice(__dirname.length + 1));
+        connected = true
+    }
+});
+
 router.get('', (req, res) => {
     res.send('play server running');
 });
 router.post('/create', (req, res) => {
     try {
-
+        let db = client.db(playLogDB);
         const roomName = req.body.roomname;
         const socketId = req.body.socketid;
         if (roomName === undefined || socketId === undefined || roomName.length<1){
@@ -37,6 +63,15 @@ router.post('/create', (req, res) => {
             gameRoomCollection[roomName]['createdOn'] = new Date();
             res.send({status: 200, msg: 'success'});
             done();
+            try{
+                db.collection('playlogs').insertOne({action: 'created', roomname: roomName, time: new Date()}, (err, r) => {
+                    if (err){
+                        console.log(err);
+                    }
+                })
+            }catch (e) {
+
+            }
         })
     }catch (e) {
 
@@ -73,6 +108,16 @@ router.post('/join', (req, res) => {
         }
         gameRoomCollection[roomName]['sockets'].push(socket);
         res.send({status: 200, msg: 'success'});
+        let db = client.db(playLogDB);
+        try{
+            db.collection('playlogs').insertOne({action: 'joined', roomname: roomName, time: new Date()}, (err, r) => {
+                if (err){
+                    console.log(err);
+                }
+            })
+        }catch (e) {
+
+        }
     } catch (e) {
 
     }
@@ -346,6 +391,16 @@ async function gameManager(roomName) {
                     if (nextWinPosition >= numberOfPlayers) {
                         console.log('GameOver');
                         broadcast(roomName, 'gameover', 'Game Over');
+                        let db = client.db(playLogDB);
+                        try{
+                            db.collection('playlogs').insertOne({action: 'gameover', roomname: roomName, time: new Date()}, (err, r) => {
+                                if (err){
+                                    console.log(err);
+                                }
+                            })
+                        }catch (e) {
+
+                        }
                         cleanUpRoom();
                     }
                 }
