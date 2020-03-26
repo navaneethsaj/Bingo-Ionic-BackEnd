@@ -309,7 +309,6 @@ async function gameManager(roomName) {
             }catch (e) {
 
             }
-            console.log()
         }
     }
 

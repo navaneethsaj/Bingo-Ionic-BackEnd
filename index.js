@@ -38,6 +38,7 @@ const gameRoomCollection = ret[1];
 
 
 const scores = require('./endpoints/scoreboard');
+const admin = require('./endpoints/admin')(gameRoomCollection);
 io.origins('*:*');
 io.on('connection', function(socket){
     console.log('a user connected', socket.id);
@@ -84,6 +85,7 @@ app.use(session(
 app.use('/auth', auth);
 app.use('/play',play);
 app.use('/score', scores);
+app.use('/admin', admin);
 app.use(express.static(path.join(__dirname, 'public/www')));
 app.get('/web', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'))
