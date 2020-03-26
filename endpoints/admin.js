@@ -31,13 +31,18 @@ router.use((req, res, next) =>{
 router.post('/room', (req, res) => {
     // console.log('room => ', gameRoomCollection);
     let responseObj = [];
-    for(let key in gameRoomCollection){
-        let obj = {};
-        obj.name = gameRoomCollection[key].roomname;
-        obj.createdOn = moment(gameRoomCollection[key].createdOn).fromNow();
-        obj.playerCount = gameRoomCollection[key].sockets.length;
-        obj.botplay = gameRoomCollection[key].botplay;
-        responseObj.push(obj)
+    try{
+        for(let key in gameRoomCollection){
+            let obj = {};
+            obj.name = gameRoomCollection[key].roomname;
+            obj.createdOn = moment(gameRoomCollection[key].createdOn).fromNow();
+            obj.playerCount = gameRoomCollection[key].sockets.length;
+            obj.botplay = gameRoomCollection[key].botplay;
+            obj.started = gameRoomCollection[key].started;
+            responseObj.push(obj)
+        }
+    }catch (e) {
+
     }
     res.send(responseObj);
 });
