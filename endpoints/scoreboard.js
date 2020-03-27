@@ -47,7 +47,7 @@ router.post('/my', (req, res) => {
             res.send({ranks: 0});
             return
         }
-        console.log('calculating myrank')
+        console.log('calculating myrank');
         let ranks = 0;
         for (const i of result){
             ranks ++;
@@ -55,7 +55,7 @@ router.post('/my', (req, res) => {
                 break;
             }
         }
-        console.log('my rank', ranks)
+        console.log('my rank', ranks);
         res.send({ranks: ranks});
     })
 

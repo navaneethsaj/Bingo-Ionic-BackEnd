@@ -3,21 +3,42 @@ const router = express.Router();
 const globals = require('../creds/mongoDB');
 const uri = globals.uri;
 const authDB = globals.authDbName;
+const playLogDB = globals.playLogDB;
 const MongoClient = require('mongodb').MongoClient;
 const ObjectID = require('mongodb').ObjectID;
 const client = new MongoClient(uri, {useNewUrlParser: true, useUnifiedTopology: true});
 let gameRoomCollection = null;
 const moment = require('moment');
+
+
+var connected = false;
+router.use((req, res, next) => {
+    if (connected){
+        next()
+    }else {
+        res.send({status: 290, msg: 'please try again later. db connection not established'})
+    }
+});
+
+client.connect((err)=>{
+    if (err){
+        console.log(err);
+        console.log('db conn failed '+ __filename.slice(__dirname.length + 1))
+    }else {
+        console.log('db connected '+ __filename.slice(__dirname.length + 1));
+        connected = true
+    }
+});
+
 router.post('/login', (req, res) => {
-    console.log('send1');
     if (req.body.username === 'admin123456' && req.body.password === 'admin123456'){
         req.session.role = 'admin';
         res.send({status: 200, msg: 'loggedIn'});
-        console.log('send2');
+        console.log('admin login success');
         return
     }
     res.send({status: 201, msg: 'creds wrong'});
-    console.log('send3');
+    console.error('admin login failed')
 });
 
 router.use((req, res, next) =>{
@@ -29,7 +50,6 @@ router.use((req, res, next) =>{
 });
 
 router.post('/room', (req, res) => {
-    // console.log('room => ', gameRoomCollection);
     let responseObj = [];
     try{
         for(let key in gameRoomCollection){
@@ -55,12 +75,25 @@ router.post('/chat/specific', (req, res) => {
 });
 
 router.post('/chat/all', (req, res) => {
-    const message = req.body.message
+    const message = req.body.message;
     for (let roomname in gameRoomCollection){
         broadcast(roomname, 'chat', {id: 'Admin (Bingo5x5)', msg: message});
     }
     res.send({status: 200, msg:'sent'})
 });
+
+router.post('/chart', (req, res) => {
+    let days = req.body.days;
+    const time = new Date(new Date().getTime() - (days * 24 * 60 * 60 * 1000));
+    let db = client.db(playLogDB)
+    db.collection('playlogs').find({time: {$gte: time}}).toArray((err, value) => {
+        if (err === null){
+            res.send(value);
+            return
+        }
+        res.send([])
+    })
+})
 
 async function broadcast(roomName, event, msg) {
     let sockets;

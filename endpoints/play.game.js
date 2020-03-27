@@ -286,7 +286,7 @@ async function gameManager(roomName) {
             playerTurnLock.acquire('lock', (done) => {
                 playerTurn = playerTurn % numberOfPlayers;
                 done();
-            })
+            });
             if (wonPlayers.includes(index)) {
                 wonPlayers.splice(wonPlayers.indexOf(index), 1);
             }
