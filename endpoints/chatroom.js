@@ -1,6 +1,6 @@
 const AsyncLock = require('async-lock');
 let lock = new AsyncLock();
-let chats = [{username: 'Admin', msg: 'Welcome to ChatRoom', time: new Date()},{username: 'Admin', time: new Date(), msg: 'You can chat with fellow players and challenge them here'},]
+let chats = [{username: 'Admin', msg: 'Welcome to ChatRoom', time: new Date()},{username: 'Admin', time: new Date(), msg: 'You can chat with fellow players and challenge them here'},];
 let io;
 function chatHandler(msg){
     try{
@@ -8,8 +8,8 @@ function chatHandler(msg){
             try{
                 if (msg.msg.length > 0 && msg.username.length > 0){
                     msg.time = new Date();
-                    chats.push(msg)
-                    if (chats.length > 4){
+                    chats.push(msg);
+                    if (chats.length > 100){
                         chats.splice(0, 1);
                     }
                 }
@@ -33,8 +33,17 @@ module.exports = function (io_ref) {
 };
 function broadcast(){
     let sockets;
+    let clonedchats = [];
+    lock.acquire('lock', (done) => {
+        try{
+            clonedchats = [...chats];
+        }catch (e) {
+
+        }
+        done()
+    });
     sockets = io.of('/chatroom').clients().connected || {};
     for (let key in sockets){
-        sockets[key].emit('chatroom', {list:  chats});
+        sockets[key].emit('chatroom', {list:  clonedchats});
     }
 }
