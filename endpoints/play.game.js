@@ -40,6 +40,7 @@ router.post('/create', (req, res) => {
         let db = client.db(playLogDB);
         const roomName = req.body.roomname;
         const socketId = req.body.socketid;
+        const playername = req.body.username || 'Guest';
         if (roomName === undefined || socketId === undefined || roomName.length<1){
             res.send({status: 201, msg: 'invalid data'});
             return
@@ -57,6 +58,8 @@ router.post('/create', (req, res) => {
             const socket = io.sockets.connected[socketId];
             gameRoomCollection[roomName] = {};
             gameRoomCollection[roomName]['roomname'] = roomName;
+            gameRoomCollection[roomName]['playername'] = [];
+            gameRoomCollection[roomName]['playername'].push(playername);
             gameRoomCollection[roomName]['sockets'] = [];
             gameRoomCollection[roomName]['sockets'].push(socket);
             gameManager(roomName);
@@ -81,6 +84,7 @@ router.post('/join', (req, res) => {
     try{
         const roomName = req.body.roomname;
         const socketId = req.body.socketid;
+        const playername = req.body.username || 'Guest';
         if (roomName === undefined || socketId === undefined){
             res.send({status: 201, msg: 'invalid data'});
             return
@@ -106,6 +110,7 @@ router.post('/join', (req, res) => {
             res.send({status: 207, msg: 'Opponent Playing with BOT'});
             return;
         }
+        gameRoomCollection[roomName]['playername'].push(playername);
         gameRoomCollection[roomName]['sockets'].push(socket);
         res.send({status: 200, msg: 'success'});
         let db = client.db(playLogDB);
@@ -230,6 +235,7 @@ async function gameManager(roomName) {
                     sockets[numberOfPlayers].emit('handshake2', strikerValues);
                     sockets[numberOfPlayers].emit('handshake3', numberOfPlayers + 1);
                     broadcast(roomName, 'playerjoined', numberOfPlayers + 1);
+                    broadcast(roomName, 'playernames', {playername: gameRoomCollection[roomName].playername || []});
                     numberOfPlayers += 1;
                 } else if (numberOfPlayers > sockets.length) {
                     console.log('more no of players')
@@ -240,6 +246,7 @@ async function gameManager(roomName) {
         catch (e) {
             console.log()
         }
+        console.log(gameRoomCollection[roomName])
     }
 
     async function broadcast(roomName, event, msg) {
@@ -278,6 +285,7 @@ async function gameManager(roomName) {
             }catch (e) {
                 return
             }
+            gameRoomCollection[roomName]['playername'].splice(index, 1);
             sockets.splice(index, 1);
             broadcast(roomName, 'playerexit', index + 1);
             playerGrids.splice(index, 1);
@@ -305,7 +313,8 @@ async function gameManager(roomName) {
     function broadCastNewPlayerId() {
         for (let sock of sockets) {
             try{
-                sock.emit("newplayerid", {playerid: sockets.indexOf(sock) + 1, total: sockets.length});
+                sock.emit("newplayerid", {playerid: sockets.indexOf(sock) + 1, total: sockets.length,
+                    playername: gameRoomCollection[roomName].playername || []});
             }catch (e) {
 
             }
