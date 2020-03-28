@@ -246,7 +246,6 @@ async function gameManager(roomName) {
         catch (e) {
             console.log()
         }
-        console.log(gameRoomCollection[roomName])
     }
 
     async function broadcast(roomName, event, msg) {

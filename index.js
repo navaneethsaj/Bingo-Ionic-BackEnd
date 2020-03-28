@@ -35,7 +35,7 @@ const auth = require('./endpoints/authentication');
 const ret = require('./endpoints/play.game')(io);
 const play = ret[0];
 const gameRoomCollection = ret[1];
-
+const globalChatHandler = require('./endpoints/chatroom')(io);
 
 const scores = require('./endpoints/scoreboard');
 const admin = require('./endpoints/admin')(gameRoomCollection);
