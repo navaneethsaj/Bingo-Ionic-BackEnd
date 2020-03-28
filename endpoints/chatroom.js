@@ -41,9 +41,9 @@ function broadcast(){
 
         }
         done()
+        sockets = io.of('/chatroom').clients().connected || {};
+        for (let key in sockets){
+            sockets[key].emit('chatroom', {list:  clonedchats});
+        }
     });
-    sockets = io.of('/chatroom').clients().connected || {};
-    for (let key in sockets){
-        sockets[key].emit('chatroom', {list:  clonedchats});
-    }
 }
