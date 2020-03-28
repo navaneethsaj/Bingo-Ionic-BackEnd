@@ -1,11 +1,23 @@
+const AsyncLock = require('async-lock');
+let lock = new AsyncLock();
 let chats = [{username: 'Admin', msg: 'Welcome to ChatRoom', time: new Date()},{username: 'Admin', time: new Date(), msg: 'You can chat with fellow players and challenge them here'},]
 let io;
 function chatHandler(msg){
     try{
-        if (msg.msg.length > 0 && msg.username.length > 0){
-            msg.time = new Date();
-            chats.push(msg)
-        }
+        lock.acquire('lock', (done) => {
+            try{
+                if (msg.msg.length > 0 && msg.username.length > 0){
+                    msg.time = new Date();
+                    chats.push(msg)
+                    if (chats.length > 4){
+                        chats.splice(0, 1);
+                    }
+                }
+            }catch (e) {
+
+            }
+            done()
+        })
     }catch (e) {
         console.log(e)
     }
