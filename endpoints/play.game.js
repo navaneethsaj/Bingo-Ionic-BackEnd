@@ -152,95 +152,101 @@ async function gameManager(roomName) {
     async function addListener() {
         try{
             listenerAddLock.acquire(roomName, (done) => {
-                if (numberOfPlayers < sockets.length) {
-                    console.log('added listener', 'Player', numberOfPlayers + 1);
-                    console.log('number of players in room', numberOfPlayers + 1);
-                    playerGrids[numberOfPlayers] = null;
-                    bingoScore[numberOfPlayers] = 0;
+                try{
+                    if (numberOfPlayers < sockets.length) {
+                        console.log('added listener', 'Player', numberOfPlayers + 1);
+                        console.log('number of players in room', numberOfPlayers + 1);
+                        playerGrids[numberOfPlayers] = null;
+                        bingoScore[numberOfPlayers] = 0;
 
-                    // binded player index is not used
-                    sockets[numberOfPlayers].on('played', function (msg) {
-                        gameRoomCollection[roomName]['started'] = true;
-                        const playerIndex = sockets.indexOf(this.currentSocket);
-                        console.log(msg, ' - Player ' + playerIndex);
-                        if (playerTurn === playerIndex) {
-                            if (!strikerValues.includes(msg)) {
-                                broadcast(roomName, 'played', msg);
-                                strikerValues.push(msg);
-                                checkStatus();
-                                playerTurnLock.acquire('lock', (done)=>{
-                                    playerTurn = ++playerTurn % numberOfPlayers;
-                                    if (wonPlayers.includes(playerTurn)) {
+                        // binded player index is not used
+                        sockets[numberOfPlayers].on('played', function (msg) {
+                            gameRoomCollection[roomName]['started'] = true;
+                            const playerIndex = sockets.indexOf(this.currentSocket);
+                            console.log(msg, ' - Player ' + playerIndex);
+                            if (playerTurn === playerIndex) {
+                                if (!strikerValues.includes(msg)) {
+                                    broadcast(roomName, 'played', msg);
+                                    strikerValues.push(msg);
+                                    checkStatus();
+                                    playerTurnLock.acquire('lock', (done)=>{
                                         playerTurn = ++playerTurn % numberOfPlayers;
-                                    }
-                                    console.log('next player', playerTurn);
+                                        if (wonPlayers.includes(playerTurn)) {
+                                            playerTurn = ++playerTurn % numberOfPlayers;
+                                        }
+                                        console.log('next player', playerTurn);
 
-                                    function botplay() {
-                                        playerTurn = 1;
-                                        for (let val of botgridValues){
-                                            if (!strikerValues.includes(val)){
-                                                strikerValues.push(val);
-                                                console.log('botplayed', val);
-                                                setTimeout(()=>{
-                                                    sockets[0].emit('played', val);
-                                                    playerTurn = 0;
-                                                }, 1200);
-                                                return
+                                        function botplay() {
+                                            playerTurn = 1;
+                                            for (let val of botgridValues){
+                                                if (!strikerValues.includes(val)){
+                                                    strikerValues.push(val);
+                                                    console.log('botplayed', val);
+                                                    setTimeout(()=>{
+                                                        sockets[0].emit('played', val);
+                                                        playerTurn = 0;
+                                                    }, 1200);
+                                                    return
+                                                }
                                             }
                                         }
-                                    }
 
-                                    try{
-                                        if (gameRoomCollection[roomName]['botplay']){
-                                            botplay()
+                                        try{
+                                            if (gameRoomCollection[roomName]['botplay']){
+                                                botplay()
+                                            }
+                                        }catch (e) {
+
                                         }
-                                    }catch (e) {
+                                        done()
+                                    });
+                                } else {
+                                    this.currentSocket.emit('err', ERR_CODES.ALREADY_STRIKED);
+                                    console.log('already striked');
+                                }
 
-                                    }
-                                    done()
-                                });
-                            } else {
-                                this.currentSocket.emit('err', ERR_CODES.ALREADY_STRIKED);
-                                console.log('already striked');
                             }
-
-                        }
-                        else {
-                            this.currentSocket.emit('err', ERR_CODES.WRONG_PLAYER);
-                            console.log('incorrect player');
-                        }
-                    }.bind({currentSocket: sockets[numberOfPlayers], playerIndex: Number(numberOfPlayers)}));
-                    sockets[numberOfPlayers].on('gridValues', function (msg) {
-                        const playerIndex = sockets.indexOf(this.currentSocket);
-                        playerGrids[playerIndex] = msg;
-                    }.bind({currentSocket: sockets[numberOfPlayers], playerIndex: Number(numberOfPlayers)}));
-                    sockets[numberOfPlayers].on('disconnect', function (msg) {
-                        // console.log(msg, this.currentSocket.id, this.playerIndex);
-                        cleanUpPlayerData(this.currentSocket)
-                    }.bind({currentSocket: sockets[numberOfPlayers], playerIndex: Number(numberOfPlayers)}));
-                    sockets[numberOfPlayers].on('botplay', (msg) => {
-                        if (numberOfPlayers < 2){
-                            console.log('bot play started');
-                            gameRoomCollection[roomName]['botplay'] = true;
-                            botgridValues = _.range(1, 26);
-                            botgridValues = _.shuffle(botgridValues);
-                            playerGrids.push(botgridValues);
-                        }
-                    });
-                    sockets[numberOfPlayers].on('chatted', function (msg) {
-                        console.log('chat', msg);
-                       broadcast(roomName, 'chat', {id: msg.id, msg: msg.msg});
-                    }.bind({playerIndex: Number(numberOfPlayers)}));
-                    sockets[numberOfPlayers].emit('handshake1', 'ok' + numberOfPlayers);
-                    sockets[numberOfPlayers].emit('handshake2', strikerValues);
-                    sockets[numberOfPlayers].emit('handshake3', numberOfPlayers + 1);
-                    broadcast(roomName, 'playerjoined', numberOfPlayers + 1);
-                    broadcast(roomName, 'playernames', {playername: gameRoomCollection[roomName].playername || []});
-                    numberOfPlayers += 1;
-                } else if (numberOfPlayers > sockets.length) {
-                    console.log('more no of players')
+                            else {
+                                this.currentSocket.emit('err', ERR_CODES.WRONG_PLAYER);
+                                console.log('incorrect player');
+                            }
+                        }.bind({currentSocket: sockets[numberOfPlayers], playerIndex: Number(numberOfPlayers)}));
+                        sockets[numberOfPlayers].on('gridValues', function (msg) {
+                            const playerIndex = sockets.indexOf(this.currentSocket);
+                            playerGrids[playerIndex] = msg;
+                        }.bind({currentSocket: sockets[numberOfPlayers], playerIndex: Number(numberOfPlayers)}));
+                        sockets[numberOfPlayers].on('disconnect', function (msg) {
+                            // console.log(msg, this.currentSocket.id, this.playerIndex);
+                            cleanUpPlayerData(this.currentSocket)
+                        }.bind({currentSocket: sockets[numberOfPlayers], playerIndex: Number(numberOfPlayers)}));
+                        sockets[numberOfPlayers].on('botplay', (msg) => {
+                            if (numberOfPlayers < 2){
+                                console.log('bot play started');
+                                gameRoomCollection[roomName]['botplay'] = true;
+                                botgridValues = _.range(1, 26);
+                                botgridValues = _.shuffle(botgridValues);
+                                playerGrids.push(botgridValues);
+                            }
+                        });
+                        sockets[numberOfPlayers].on('chatted', function (msg) {
+                            console.log('chat', msg);
+                            broadcast(roomName, 'chat', {id: msg.id, msg: msg.msg});
+                        }.bind({playerIndex: Number(numberOfPlayers)}));
+                        sockets[numberOfPlayers].emit('handshake1', 'ok' + numberOfPlayers);
+                        sockets[numberOfPlayers].emit('handshake2', strikerValues);
+                        sockets[numberOfPlayers].emit('handshake3', numberOfPlayers + 1);
+                        broadcast(roomName, 'playerjoined', numberOfPlayers + 1);
+                        broadcast(roomName, 'playernames', {playername: gameRoomCollection[roomName].playername || []});
+                        numberOfPlayers += 1;
+                    }
+                    else if (numberOfPlayers > sockets.length) {
+                        console.log('more no of players')
+                    }
+                    done();
                 }
-                done();
+                catch (e) {
+                    done()
+                }
             }, null, null);
         }
         catch (e) {
