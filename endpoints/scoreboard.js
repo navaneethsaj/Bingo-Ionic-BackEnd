@@ -28,7 +28,7 @@ client.connect((err)=>{
 
 router.get('', (req, res) => {
    const db = client.db(authDB);
-   db.collection('players').find().project({username: 1, score: 1, _id: 0}).sort({score: -1}).limit(100).toArray((err, result) => {
+   db.collection('players').find().project({username: 1, score: 1, _id: 0}).sort({score: -1}).limit(200).toArray((err, result) => {
        if (err){
            console.log(err);
            res.send({ranks: []});
