@@ -91,7 +91,7 @@ app.use(express.static(path.join(__dirname, 'public/www')));
 app.get('/web', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'))
 });
-app.get('versionNo', (req, res) => {
+app.get('/versionNo', (req, res) => {
     let versionNo = 5;
     res.send({version: versionNo})
 });
