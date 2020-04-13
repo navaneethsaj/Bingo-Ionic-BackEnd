@@ -26,7 +26,7 @@ client.connect((err)=>{
     }
 });
 
-router.get('/create', (req, res) => {
+router.post('/create', (req, res) => {
     let db = client.db(playLogDB);
     let playerid = req.body.playerid || 'guest';
     try{
