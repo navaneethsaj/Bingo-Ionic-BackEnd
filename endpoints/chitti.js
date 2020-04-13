@@ -26,7 +26,7 @@ client.connect((err)=>{
     }
 });
 
-router.get('create', (req, res) => {
+router.get('/create', (req, res) => {
     let db = client.db(playLogDB);
     try{
         db.collection('playlogs').insertOne({action: 'chitti_play', roomname: roomName, time: new Date()}, (err, r) => {
@@ -41,7 +41,7 @@ router.get('create', (req, res) => {
     res.send({status: 200});
 });
 
-router.get('gameover', (req, res) => {
+router.get('/gameover', (req, res) => {
     let db = client.db(playLogDB);
     try{
         db.collection('playlogs').insertOne({action: 'chitti_gameover', roomname: roomName, time: new Date()}, (err, r) => {
