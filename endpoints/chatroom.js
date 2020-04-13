@@ -2,7 +2,7 @@ const AsyncLock = require('async-lock');
 let lock = new AsyncLock();
 let chats = [{username: 'Admin', msg: 'Welcome to ChatRoom', time: new Date()},
 {username: 'Admin', time: new Date(), msg: 'You can chat with fellow players and challenge them here'},
-{username: 'Admin', time: new Date(), msg: 'New Update Available on 12-04-2020. Kindly Update on 12-04-2020. Enjoy better UI and Chatroom'},
+{username: 'Admin', time: new Date(), msg: 'New Update will be Available on 15-04-2020. Kindly Update on 15-04-2020. Enjoy better UI.'},
 ];
 let io;
 function chatHandler(msg){
