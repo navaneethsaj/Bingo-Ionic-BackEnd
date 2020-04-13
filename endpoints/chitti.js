@@ -28,8 +28,9 @@ client.connect((err)=>{
 
 router.get('/create', (req, res) => {
     let db = client.db(playLogDB);
+    let playerid = req.body.playerid || 'guest';
     try{
-        db.collection('playlogs').insertOne({action: 'chitti_play', roomname: roomName, time: new Date()}, (err, r) => {
+        db.collection('playlogs').insertOne({action: 'chitti_play', playerid: playerid ,time: new Date()}, (err, r) => {
             if (err){
                 console.log(err);
             }
@@ -41,10 +42,11 @@ router.get('/create', (req, res) => {
     res.send({status: 200});
 });
 
-router.get('/gameover', (req, res) => {
+router.post('/gameover', (req, res) => {
     let db = client.db(playLogDB);
+    let playerid = req.body.playerid || 'guest';
     try{
-        db.collection('playlogs').insertOne({action: 'chitti_gameover', roomname: roomName, time: new Date()}, (err, r) => {
+        db.collection('playlogs').insertOne({action: 'chitti_gameover', playerid: playerid, time: new Date()}, (err, r) => {
             if (err){
                 console.log(err);
             }
