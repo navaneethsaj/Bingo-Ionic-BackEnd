@@ -36,7 +36,7 @@ router.get('/create', (req, res) => {
             console.log('logged chitti create')
         })
     }catch (e) {
-
+        console.log(e);
     }
     res.send({status: 200});
 });
@@ -51,7 +51,7 @@ router.get('/gameover', (req, res) => {
             console.log('logged chitti gameover')
         })
     }catch (e) {
-
+        console.log(e);
     }
     res.send({status: 200});
 });
