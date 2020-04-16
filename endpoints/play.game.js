@@ -176,6 +176,7 @@ async function gameManager(roomName) {
                                         }
                                         console.log('next player', playerTurn);
 
+                                        // deprecated
                                         function botplay() {
                                             playerTurn = 1;
                                             for (let val of botgridValues){

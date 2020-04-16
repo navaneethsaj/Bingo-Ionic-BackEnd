@@ -39,6 +39,7 @@ const gameRoomCollection = ret[1];
 const globalChatHandler = require('./endpoints/chatroom')(io);
 const chitti = require('./endpoints/chitti');
 const scores = require('./endpoints/scoreboard');
+const notifications = require('./endpoints/notifications');
 const admin = require('./endpoints/admin')(gameRoomCollection);
 io.origins('*:*');
 io.on('connection', function(socket){
@@ -88,6 +89,7 @@ app.use('/play',play);
 app.use('/score', scores);
 app.use('/admin', admin);
 app.use('/chitti', chitti);
+app.use('/nots', notifications);
 app.use(express.static(path.join(__dirname, 'public/www')));
 app.get('/web', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'))
