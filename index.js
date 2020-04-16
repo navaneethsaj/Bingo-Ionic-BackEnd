@@ -95,7 +95,7 @@ app.get('/web', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'))
 });
 app.get('/versionNo', (req, res) => {
-    let versionNo = 5;
+    let versionNo = 6;
     res.send({version: versionNo})
 });
 app.get('*', (req, res) => {
