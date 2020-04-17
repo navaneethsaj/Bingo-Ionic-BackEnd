@@ -67,6 +67,11 @@ io.on('connection', function(socket){
         }
         socket.emit('searchresult', searchres)
     })
+    socket.on('getactive', (msg) => {
+        let AllSockets = io.of('/').clients().connected || {};
+        socket.emit('activePlayers', {activeCount : Object.keys(AllSockets).length / 2});
+        console.log(Object.keys(AllSockets).length)
+    })
 });
 app.use(cors(corsOptions));
 app.use(express.json());

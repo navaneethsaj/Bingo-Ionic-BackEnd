@@ -42,10 +42,19 @@ function broadcast(){
         }catch (e) {
 
         }
-        done()
+        done();
         sockets = io.of('/chatroom').clients().connected || {};
         for (let key in sockets){
-            sockets[key].emit('chatroom', {list:  clonedchats});
+            try{
+                sockets[key].emit('chatroom', {list:  clonedchats});
+            }catch (e) {
+                console.log(e)
+            }
+            try{
+                sockets[key].emit('details', {activeCount : Object.keys(sockets).length});
+            }catch (e) {
+                console.log(e);
+            }
         }
     });
 }
