@@ -1,5 +1,7 @@
 const AsyncLock = require('async-lock');
 let lock = new AsyncLock();
+let lockUsers = new AsyncLock();
+let activeUsers = {count: 0};
 let chats = [{username: 'Admin', msg: 'Welcome to ChatRoom', time: new Date()},
 {username: 'Admin', time: new Date(), msg: 'You can chat with fellow players and challenge them here'},
 ];
@@ -28,10 +30,22 @@ function chatHandler(msg){
 module.exports = function (io_ref) {
     io = io_ref;
     io.of('/chatroom').on('connection', (socket) => {
-        console.log('chat room connection by a user');
-        socket.on('chatroom', chatHandler)
+        console.log('chat room connection by a user', activeUsers.count+1);
+        socket.on('chatroom', chatHandler);
+        socket.on('disconnect', ()=>{
+            console.log('chat disconnected', activeUsers.count-1);
+            lockUsers.acquire('user', (done) => {
+                activeUsers.count--;
+                done()
+            })
+        });
+        lockUsers.acquire('user', (done) => {
+            activeUsers.count++;
+            done()
+        })
     });
     setInterval(broadcast, 500);
+    return activeUsers;
 };
 function broadcast(){
     let sockets;
@@ -51,7 +65,8 @@ function broadcast(){
                 console.log(e)
             }
             try{
-                sockets[key].emit('details', {activeCount : Object.keys(sockets).length});
+                sockets[key].emit('details', {activeCount : activeUsers.count});
+                // console.log('chatusers' , activeUsers.count)
             }catch (e) {
                 console.log(e);
             }

@@ -4,6 +4,7 @@ var cors = require('cors');
 const app = express();
 const path = require('path');
 const http = require('http').createServer(app);
+const AsyncLock = require('async-lock');
 const io = require('socket.io')(http);
 var session = require('express-session');
 const Fuse = require('fuse.js');
@@ -36,16 +37,26 @@ const auth = require('./endpoints/authentication');
 const ret = require('./endpoints/play.game')(io);
 const play = ret[0];
 const gameRoomCollection = ret[1];
-const globalChatHandler = require('./endpoints/chatroom')(io);
+const activeChatCount = require('./endpoints/chatroom')(io);
 const chitti = require('./endpoints/chitti');
 const scores = require('./endpoints/scoreboard');
 const notifications = require('./endpoints/notifications');
 const admin = require('./endpoints/admin')(gameRoomCollection);
 io.origins('*:*');
+let lockUserCount = new AsyncLock();
+let allSocketCount = 0;
 io.on('connection', function(socket){
     console.log('a user connected', socket.id);
+    lockUserCount.acquire('user', (done) => {
+        allSocketCount++;
+        done()
+    });
     socket.on('disconnect', ()=>{
-        console.log('disconnected', socket.id)
+        console.log('disconnected', socket.id);
+        lockUserCount.acquire('user', (done) => {
+            allSocketCount--;
+            done()
+        })
     });
     socket.on('searchtext', (msg) => {
         console.log('searchtext', msg);
@@ -66,11 +77,10 @@ io.on('connection', function(socket){
             searchres.push(item.item.roomname);
         }
         socket.emit('searchresult', searchres)
-    })
+    });
     socket.on('getactive', (msg) => {
-        let AllSockets = io.of('/').clients().connected || {};
-        socket.emit('activePlayers', {activeCount : Object.keys(AllSockets).length / 2});
-        console.log(Object.keys(AllSockets).length)
+        socket.emit('activePlayers', {activeCount : (allSocketCount - activeChatCount.count)/2});
+        console.log(allSocketCount, activeChatCount)
     })
 });
 app.use(cors(corsOptions));
