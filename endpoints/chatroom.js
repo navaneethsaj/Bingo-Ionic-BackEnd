@@ -18,6 +18,7 @@ function chatHandler(msg){
                     }
                 }
             }catch (e) {
+                console.log(e)
 
             }
             done()

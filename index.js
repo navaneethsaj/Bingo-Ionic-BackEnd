@@ -80,7 +80,7 @@ io.on('connection', function(socket){
     });
     socket.on('getactive', (msg) => {
         socket.emit('activePlayers', {activeCount : (allSocketCount - activeChatCount.count)/2});
-        console.log(allSocketCount, activeChatCount)
+        // console.log(allSocketCount, activeChatCount)
     })
 });
 app.use(cors(corsOptions));
