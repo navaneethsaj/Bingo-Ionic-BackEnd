@@ -79,7 +79,7 @@ io.on('connection', function(socket){
         socket.emit('searchresult', searchres)
     });
     socket.on('getactive', (msg) => {
-        socket.emit('activePlayers', {activeCount : (allSocketCount - activeChatCount.count)/2});
+        socket.emit('activePlayers', {activeCount : Math.floor((allSocketCount)/2), chatCount: activeChatCount.count});
         // console.log(allSocketCount, activeChatCount)
     })
 });
