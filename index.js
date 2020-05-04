@@ -33,6 +33,7 @@ const corsOptions = {
     },
     credentials: true
 };
+let activeUsers = {};
 const auth = require('./endpoints/authentication');
 const ret = require('./endpoints/play.game')(io);
 const play = ret[0];
@@ -41,9 +42,11 @@ const activeChatCount = require('./endpoints/chatroom')(io);
 const chitti = require('./endpoints/chitti');
 const scores = require('./endpoints/scoreboard');
 const notifications = require('./endpoints/notifications');
+const friends = require('./endpoints/friends')(activeUsers);
 const admin = require('./endpoints/admin')(gameRoomCollection);
 io.origins('*:*');
 let lockUserCount = new AsyncLock();
+let activeUserLock = new AsyncLock()
 let allSocketCount = 0;
 io.on('connection', function(socket){
     console.log('a user connected', socket.id);
@@ -81,6 +84,18 @@ io.on('connection', function(socket){
     socket.on('getactive', (msg) => {
         socket.emit('activePlayers', {activeCount : Math.floor((allSocketCount)/2), chatCount: activeChatCount.count});
         // console.log(allSocketCount, activeChatCount)
+    });
+    socket.on('active', (msg) => {
+        activeUserLock.acquire('active', (done) => {
+            if (activeUsers[msg.id]){
+                activeUsers[msg.id]['socket'] = socket;
+                activeUsers[msg.id]['lastActive'] = new Date();
+            }else {
+                activeUsers[msg.id] = {id: msg.id, lastActive: new Date(), socket: socket};
+                console.log('active', activeUsers);
+            }
+            done()
+        })
     })
 });
 app.use(cors(corsOptions));
@@ -105,6 +120,7 @@ app.use('/score', scores);
 app.use('/admin', admin);
 app.use('/chitti', chitti);
 app.use('/nots', notifications);
+app.use('/friends', friends);
 app.use(express.static(path.join(__dirname, 'public/www')));
 app.get('/web', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'))
