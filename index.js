@@ -89,10 +89,11 @@ io.on('connection', function(socket){
         activeUserLock.acquire('active', (done) => {
             if (activeUsers[msg.id]){
                 activeUsers[msg.id]['socket'] = socket;
+                activeUsers[msg.id]['playing'] = msg.playing || false;
                 activeUsers[msg.id]['lastActive'] = new Date();
             }else {
-                activeUsers[msg.id] = {id: msg.id, lastActive: new Date(), socket: socket};
-                console.log('active', activeUsers);
+                activeUsers[msg.id] = {id: msg.id, lastActive: new Date(), socket: socket, playing: msg.playing || false};
+                // console.log('active', activeUsers);
             }
             done()
         })
@@ -126,7 +127,7 @@ app.get('/web', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'))
 });
 app.get('/versionNo', (req, res) => {
-    let versionNo = 14;
+    let versionNo = 13;
     res.send({version: versionNo})
 });
 app.get('*', (req, res) => {

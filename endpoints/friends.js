@@ -34,12 +34,17 @@ router.post('/my', (req, res) => {
 router.get('/all', (req, res) => {
     let db = client.db(authDbName);
     let result = {status: 200};
+    let playing = []
     try{
         let users = [];
         for (let user in activeUsers){
             try{
-                console.log(new Date() - activeUsers[user].lastActive);
+                // console.log(new Date() - activeUsers[user].lastActive);
                 if (new Date() - activeUsers[user].lastActive < 10000){
+                    // console.log('user', user.playing)
+                    if (activeUsers[user].playing){
+                        playing.push(user)
+                    }
                     users.push(ObjectID(user))
                 }else {
                     delete activeUsers[user];
@@ -49,14 +54,14 @@ router.get('/all', (req, res) => {
                 console.log(e)
             }
         }
-        console.log(users);
+        // console.log(users);
         db.collection('players').find({_id: {$in: users}}).limit(200).project({username: 1, score: 1}).toArray((err, r) => {
             if (err){
                 console.log(err);
                 res.send({status: 202,});
                 return
             }
-            console.log(r);
+            // console.log(r);
             result.active = r;
             db.collection('players').find({_id: {$nin: users}}).limit(100 + 200-r.length).project({username: 1, score: 1}).toArray((err, r) => {
                 if (err){
@@ -65,6 +70,7 @@ router.get('/all', (req, res) => {
                     return
                 }
                 result.inactive = r;
+                result.playing = playing;
                 res.send(result);
             });
         })
@@ -100,7 +106,7 @@ router.post('/closingapp', (req, res) => {
     try{
         delete activeUsers[myUid];
         console.log('removed ', myUid);
-        console.log(activeUsers);
+        // console.log(activeUsers);
         res.send({status: 200})
     }catch (e) {
         console.log(e);
@@ -113,7 +119,7 @@ router.post('/accept', (req, res) => {
     let myUid = req.body.myUid;
     let myName = req.body.myName;
     let status = req.body.status;
-    console.log(targetUid, myName, myUid, status);
+    console.log('accept', targetUid, myName, myUid, status);
     try{
         if (status){
             activeUsers[targetUid].socket.emit('challengeresponse', {
