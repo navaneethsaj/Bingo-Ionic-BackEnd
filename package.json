@@ -14,7 +14,7 @@
     "express": "^4.17.1",
     "express-session": "^1.17.0",
     "fuse.js": "^5.0.7-beta",
-    "lodash": "^4.17.15",
+    "lodash": "^4.17.21",
     "memorystore": "^1.6.2",
     "moment": "^2.24.0",
     "mongodb": "^3.5.5",
